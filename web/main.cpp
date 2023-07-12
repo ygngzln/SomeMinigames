@@ -1681,7 +1681,6 @@ void loop(context *ctx) {
   }
 
   writeText("FPS: " + std::to_string(ctx->fps), ctx->width-70, 8, 0, ctx);
-  writeText("DISPLAYID: " + std::to_string(ctx->displayID), ctx->width-120, 60, 0, ctx);
 
   drawMouse(ctx);
   beginRender(ctx);
