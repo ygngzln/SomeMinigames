@@ -10,23 +10,93 @@
 #include <algorithm>
 #include <cmath>
 
+struct MGolfObstacle {
+  int type;
+  int x;
+  int y;
+  int w;
+  int h;
+};
+
+struct MGolfLevel {
+  int sx, sy;
+  int hx, hy;
+
+  std::vector<MGolfObstacle> blocks;
+};
+
+struct Minigolf {
+  std::string title = "Minigolf";
+
+  int gameStatus = 0;
+
+  int score = 0, hScore = INT_MAX;
+
+  int level = 1;
+
+  int maxlevels = 5;
+  
+  std::vector<std::pair<int, int>> border;
+  std::vector<MGolfLevel> levelmaps;
+
+  int ox, oy;
+
+  double sx, sy;
+
+  int bx, by;
+
+  bool dragging = false;
+  bool launching = false;
+  long double dir = 0;
+  double dirx, diry;
+
+  std::vector<int> spThres {0, 10, 25, 100, 300, 650};
+  int power, iPower, speed;
+
+  SDL_Color linecolor = {0, 0, 0, 255};
+
+  int bg, ball, hole, flag, rock1, rock2, rock3, rock4, bounce;
+  std::vector<SDL_Texture*> sprites;
+};
+
 struct Snake {
   std::string title = "Snake";
 
   int gameStatus = 0;
 
   std::vector<std::vector<int>> grid;
+  std::vector<std::vector<int>> dirGrid;
+
+  std::vector<std::pair<int, int>> dirs {
+    {-1, 0},
+    {1, 0},
+    {0, 1},
+    {0, -1},
+  };
 
   int ax, ay;
 
   int hx, hy;
 
+  int tx, ty;
+  
+  int ox, oy;
+
   int score = 0;
 
+  int dir = 3;
+  int odir = 3;
+
+  int length = 3;
+
+  int startDelay = 45;
+  bool startDelaying = false;
+
   std::vector<std::string> sizes {"Small Grid", "Medium Grid", "Large Grid"};
+  std::vector<int> mapSize {8, 16, 20};
   int curSize = 1;
 
-  int space1, space2, apple, body, head;
+  int space1, space2, apple, body, headup, headdown, headright, headleft, start, big, mid, small;
   std::vector<SDL_Texture*> sprites;
 };
 
@@ -126,21 +196,15 @@ struct context {
 
   Tetris tetris; int tetrisHighScore; std::vector<int> recentScoresTetris;
 
-  Snake snake; std::pair<int, int> snakeHighScore; std::vector<std::pair<int, int>> snakeRecentScores;
+  Snake snake; std::pair<int, int> snakeHighScore;
+
+  Minigolf mgolf; int score = 0;
 
   int frameCount, timerFPS, lastFrame, fps, lastTime;
   int setFPS = 60;
 
-  int cursor, titleimg, background, backbutton, playButton, creditsButton, tetrisStart;
+  int cursor, titleimg, background, backbutton, playButton, creditsButton, tetrisStart, snakeStart, miniStart;
   std::vector<SDL_Texture*> spritesMain;
-
-  std::vector<SDL_Texture*> spritesGolf;
-
-  std::vector<SDL_Texture*> spritesSnake;
-
-  std::vector<SDL_Texture*> spritesAim;
-
-  std::vector<SDL_Texture*> spritesUp;
 
   int gitLogo;
   std::vector<SDL_Texture*> other;
@@ -176,7 +240,7 @@ void updateKeys(context *ctx) {
   ctx->mousestate = SDL_GetMouseState(&ctx->mouse.x, &ctx->mouse.y);
 }
 
-void setDrawColor(SDL_Color c, context *ctx) { 
+void setDrawColor(SDL_Color c, context *ctx) {
   SDL_SetRenderDrawColor(ctx->renderer, c.r, c.g, c.b, c.a); 
 }
 
@@ -201,6 +265,8 @@ void initImgs(context *ctx) {
   ctx->cursor = loadImg("assets/cursor.png", ctx->spritesMain, ctx);
   ctx->titleimg = loadImg("assets/title.png", ctx->spritesMain, ctx);
   ctx->tetrisStart = loadImg("assets/tetris.png", ctx->spritesMain, ctx);
+  ctx->snakeStart = loadImg("assets/snake.png", ctx->spritesMain, ctx);
+  ctx->miniStart = loadImg("assets/minigolf.png", ctx->spritesMain, ctx);
   ctx->backbutton = loadImg("assets/backbutton.png", ctx->spritesMain, ctx);
   ctx->playButton = loadImg("assets/playbutton.png", ctx->spritesMain, ctx);
 }
@@ -245,6 +311,55 @@ bool pointRect(int x, int y, std::vector<int> r) {
   return false;
 }
 
+bool pointCirc(int x, int y, int rx, int ry, int r) {
+  if(((x-rx) * (x-rx)) + ((y-ry) * (y-ry)) <= (r*r)) {
+    return true;
+  }
+  return false;
+}
+
+std::pair<bool, bool> rectCircBorder(int rx, int ry, int r, std::vector<int> rect) {
+  std::pair<bool, bool> res{0, 0};
+  if(rx+r <= rect[0]+rect[2] && rx-r >= rect[0]) {
+    res.first = 1;
+  }
+  if(ry+r <= rect[1]+rect[3] && ry-r >= rect[1]) {
+    res.second = 1;
+  }
+  return res;
+}
+
+std::pair<bool, bool> rectCirc(int rx, int ry, int r, std::vector<int> rect) {
+  std::pair<bool, bool> res{0, 0};
+  int tx = rx, ty = ry;
+  if(rx < rect[0]) tx = rect[0];
+  else if(rx > rect[0]+rect[2]) tx = rect[0]+rect[2];
+
+  if(ry < rect[1]) ty = rect[1];
+  else if(ry > rect[1]+rect[3]) ty = rect[1]+rect[3];
+
+  int dx = rx-tx;
+  int dy = ry-ty;
+
+  if(dx*dx + dy*dy <= r*r) {
+    if(ty == ry) {
+      res = {1, 0};
+    }else if(tx == rx) {
+      res = {0, 1};
+    }else {
+      res = {1, 1};
+    }
+  }
+  return res;
+}
+
+bool circCirc(int rx, int ry, int r, int tx, int ty, int t) {
+  if((rx-tx) * (rx-tx) + (ry-ty) * (ry-ty) <= (r*r) + (t*t)) {
+    return true;
+  }
+  return false;
+}
+
 void drawBack(context *ctx) {
   drawImage(ctx->spritesMain[ctx->backbutton], {40, 40, 150, 37}, {0, 0, 150, 37}, ctx);
   writeText("Back", 145, 45, 0, ctx);
@@ -258,10 +373,217 @@ void drawMain(context *ctx) {
   } else {
     drawImage(ctx->spritesMain[ctx->tetrisStart], {ctx->width/3, 280, 200, 200}, {0, 0, 200, 200}, ctx);
   }
+
+  if(pointRect(ctx->mouse.x, ctx->mouse.y, {(int) ((ctx->width/3)*(1.5)), 280, 210, 210})) {
+    drawImage(ctx->spritesMain[ctx->snakeStart], {(int) ((ctx->width/3)*(1.5)), 280, 210, 210}, {0, 0, 210, 210}, ctx);
+  } else {
+    drawImage(ctx->spritesMain[ctx->snakeStart], {(int) ((ctx->width/3)*(1.5)), 280, 200, 200}, {0, 0, 200, 200}, ctx);
+  }
+
+  if(pointRect(ctx->mouse.x, ctx->mouse.y, {(ctx->width-200)/2, 520, 210, 210})){
+    drawImage(ctx->spritesMain[ctx->miniStart], {(ctx->width-200)/2, 520, 210, 210}, {0, 0, 210, 210}, ctx);
+  }else{
+    drawImage(ctx->spritesMain[ctx->miniStart], {(ctx->width-200)/2, 520, 200, 200}, {0, 0, 200, 200}, ctx);
+  }
+  
+}
+
+void initGridMgolf(context* ctx) {
+  ctx->mgolf.levelmaps = std::vector<MGolfLevel> (ctx->mgolf.maxlevels+1);
+  ctx->mgolf.border = std::vector<std::pair<int, int>> (4);
+
+  ctx->mgolf.ox = (ctx->width-1200)/2;
+  ctx->mgolf.oy = 200;
+  ctx->mgolf.sx = 400;
+  ctx->mgolf.sy = 300;
+
+  ctx->mgolf.bg = loadImg("assets/minigolf/background.png", ctx->mgolf.sprites, ctx);
+  ctx->mgolf.ball = loadImg("assets/minigolf/ball.png", ctx->mgolf.sprites, ctx);
+  ctx->mgolf.hole = loadImg("assets/minigolf/hole.png", ctx->mgolf.sprites, ctx);
+  ctx->mgolf.flag = loadImg("assets/minigolf/flag.png", ctx->mgolf.sprites, ctx);
+  ctx->mgolf.rock1 = loadImg("assets/minigolf/rock1.png", ctx->mgolf.sprites, ctx);
+  ctx->mgolf.rock2 = loadImg("assets/minigolf/rock2.png", ctx->mgolf.sprites, ctx);
+  ctx->mgolf.rock3 = loadImg("assets/minigolf/rock3.png", ctx->mgolf.sprites, ctx);
+  ctx->mgolf.bounce = loadImg("assets/minigolf/bounce.png", ctx->mgolf.sprites, ctx);
+  
+  ctx->mgolf.border[0].first = 47+ctx->mgolf.ox;
+  ctx->mgolf.border[0].second = 47+ctx->mgolf.oy;
+  ctx->mgolf.border[1].first = ctx->mgolf.ox+1200-47;
+  ctx->mgolf.border[1].second = 47+ctx->mgolf.oy;
+  ctx->mgolf.border[2].first = ctx->mgolf.ox+1200-47;
+  ctx->mgolf.border[2].second = ctx->mgolf.oy+600-47;
+  ctx->mgolf.border[3].first = 47+ctx->mgolf.ox;
+  ctx->mgolf.border[3].second = ctx->mgolf.oy+600-47;
+
+  ctx->mgolf.levelmaps[1].sx = 400;
+  ctx->mgolf.levelmaps[1].sy = 300;
+  ctx->mgolf.levelmaps[1].hx = 1000;
+  ctx->mgolf.levelmaps[1].hy = 300;
+  ctx->mgolf.levelmaps[0].blocks = std::vector<MGolfObstacle>(0);
+  
+  ctx->mgolf.levelmaps[2].sx = 300;
+  ctx->mgolf.levelmaps[2].sy = 300;
+  ctx->mgolf.levelmaps[2].hx = 1000;
+  ctx->mgolf.levelmaps[2].hy = 300;
+  ctx->mgolf.levelmaps[2].blocks = std::vector<MGolfObstacle>(2);
+  MGolfObstacle two = {
+    ctx->mgolf.rock1,
+    500,
+    300,
+    50,
+    280
+  };
+  ctx->mgolf.levelmaps[2].blocks[0] = two;
+  two.x = 750;
+  ctx->mgolf.levelmaps[2].blocks[1] = two;
+
+  ctx->mgolf.levelmaps[3].sx = 300;
+  ctx->mgolf.levelmaps[3].sy = 300;
+  ctx->mgolf.levelmaps[3].hx = 1000;
+  ctx->mgolf.levelmaps[3].hy = 300;
+  ctx->mgolf.levelmaps[3].blocks = std::vector<MGolfObstacle>(4);
+  MGolfObstacle three = {
+    ctx->mgolf.bounce,
+    920,
+    300,
+    50,
+    50
+  };
+  ctx->mgolf.levelmaps[3].blocks[0] = three;
+  three.x = 450;
+  three.y = 275;
+  ctx->mgolf.levelmaps[3].blocks[1] = three;
+  three.type = ctx->mgolf.rock2;
+  three.x = 920;
+  three.y = 200;
+  three.w = 80;
+  three.h = 100;
+  ctx->mgolf.levelmaps[3].blocks[2] = three;
+  three.x = 920;
+  three.y = 400;
+  ctx->mgolf.levelmaps[3].blocks[3] = three;
+
+  ctx->mgolf.levelmaps[4].sx = 400;
+  ctx->mgolf.levelmaps[4].sy = 300;
+  ctx->mgolf.levelmaps[4].hx = 1000;
+  ctx->mgolf.levelmaps[4].hy = 500;
+  ctx->mgolf.levelmaps[4].blocks = std::vector<MGolfObstacle>(4);
+  MGolfObstacle four = {
+    ctx->mgolf.bounce,
+    1050,
+    500,
+    50,
+    50
+  };
+  ctx->mgolf.levelmaps[4].blocks[0] = four;
+  four.x = 150;
+  four.y = 500;
+  ctx->mgolf.levelmaps[4].blocks[1] = four;
+  four.type = ctx->mgolf.rock3;
+  four.x = 1000;
+  four.y = 440;
+  four.w = 280;
+  four.h = 50;
+  ctx->mgolf.levelmaps[4].blocks[2] = four;
+  four.x = 720;
+  four.y = 440;
+  ctx->mgolf.levelmaps[4].blocks[3] = four;
+
+  ctx->mgolf.levelmaps[5].sx = 200;
+  ctx->mgolf.levelmaps[5].sy = 300;
+  ctx->mgolf.levelmaps[5].hx = 800;
+  ctx->mgolf.levelmaps[5].hy = 300;
+  ctx->mgolf.levelmaps[5].blocks = std::vector<MGolfObstacle>(7);
+  MGolfObstacle five = {
+    ctx->mgolf.bounce,
+    800,
+    355,
+    50,
+    50
+  };
+  ctx->mgolf.levelmaps[5].blocks[0] = five;
+  five.y = 245;
+  ctx->mgolf.levelmaps[5].blocks[1] = five;
+  five.x = 745;
+  five.y = 300;
+  ctx->mgolf.levelmaps[5].blocks[2] = five;
+  five.x = 125;
+  ctx->mgolf.levelmaps[5].blocks[3] = five;
+  five.type = ctx->mgolf.rock2;
+  five.x = 400;
+  five.y = 300;
+  five.w = 80;
+  five.h = 100;
+  ctx->mgolf.levelmaps[5].blocks[4] = five;
+  five.x = 550;
+  five.y = 100;
+  ctx->mgolf.levelmaps[5].blocks[5] = five;
+  five.type = ctx->mgolf.rock1;
+  five.x = 1000;
+  five.y = 300;
+  five.w = 50;
+  five.h = 280;
+  ctx->mgolf.levelmaps[5].blocks[5] = five;
+  five.type = ctx->mgolf.rock3;
+  five.x = 900;
+  five.y = 100;
+  five.w = 280;
+  five.h = 50;
+  ctx->mgolf.levelmaps[5].blocks[6] = five;
 }
 
 void initGridSnake(context* ctx) {
+  ctx->snake.grid = std::vector<std::vector<int>> (ctx->snake.mapSize[ctx->snake.curSize], std::vector<int>(ctx->snake.mapSize[ctx->snake.curSize], 0));
+  ctx->snake.dirGrid = std::vector<std::vector<int>> (ctx->snake.mapSize[ctx->snake.curSize], std::vector<int>(ctx->snake.mapSize[ctx->snake.curSize], 0));
+  ctx->snake.space1 = loadImg("assets/snake/space1.png", ctx->snake.sprites, ctx);
+  ctx->snake.space2 = loadImg("assets/snake/space2.png", ctx->snake.sprites, ctx);
+  ctx->snake.apple = loadImg("assets/snake/apple.png", ctx->snake.sprites, ctx);
+  ctx->snake.body = loadImg("assets/snake/body.png", ctx->snake.sprites, ctx);
+  ctx->snake.headup = loadImg("assets/snake/headup.png", ctx->snake.sprites, ctx);
+  ctx->snake.headdown = loadImg("assets/snake/headdown.png", ctx->snake.sprites, ctx);
+  ctx->snake.headright = loadImg("assets/snake/headright.png", ctx->snake.sprites, ctx);
+  ctx->snake.headleft = loadImg("assets/snake/headleft.png", ctx->snake.sprites, ctx);
+  ctx->snake.start = loadImg("assets/snake/start.png", ctx->snake.sprites, ctx);
+  ctx->snake.big = loadImg("assets/snake/big.png", ctx->snake.sprites, ctx);
+  ctx->snake.mid = loadImg("assets/snake/mid.png", ctx->snake.sprites, ctx);
+  ctx->snake.small = loadImg("assets/snake/small.png", ctx->snake.sprites, ctx);
 
+  ctx->snake.ox = (ctx->width-ctx->snake.mapSize[ctx->snake.curSize] * 30)/2;
+  ctx->snake.oy = 240;
+
+  ctx->snake.hx = ctx->snake.mapSize[ctx->snake.curSize]/2;
+
+  if(ctx->snake.curSize == 0) {
+    ctx->snake.hy = 2;
+    ctx->snake.grid[ctx->snake.hx][ctx->snake.hy] = 4;
+    ctx->snake.grid[ctx->snake.hx][ctx->snake.hy-1] = 1;
+
+    ctx->snake.dirGrid[ctx->snake.hx][ctx->snake.hy] = 3;
+    ctx->snake.dirGrid[ctx->snake.hx][ctx->snake.hy-1] = 3;
+
+    ctx->snake.tx = ctx->snake.hx;
+    ctx->snake.ty = ctx->snake.hy-1;
+
+    ctx->snake.ax = ctx->snake.hx;
+    ctx->snake.ay = ctx->snake.hy+2;
+    return;
+  }
+
+  ctx->snake.hy = 5;
+
+  ctx->snake.grid[ctx->snake.hx][ctx->snake.hy] = 4;
+  ctx->snake.grid[ctx->snake.hx][ctx->snake.hy-1] = 1;
+  ctx->snake.grid[ctx->snake.hx][ctx->snake.hy-2] = 1;
+
+  ctx->snake.dirGrid[ctx->snake.hx][ctx->snake.hy] = 3;
+  ctx->snake.dirGrid[ctx->snake.hx][ctx->snake.hy-1] = 3;
+  ctx->snake.dirGrid[ctx->snake.hx][ctx->snake.hy-2] = 3;
+
+  ctx->snake.tx = ctx->snake.hx;
+  ctx->snake.ty = ctx->snake.hy-2;
+
+  ctx->snake.ax = ctx->snake.hx;
+  ctx->snake.ay = ctx->snake.hy+8;
 }
 
 void initGridTetris(context* ctx) {
@@ -305,6 +627,14 @@ void eventMain(context *ctx) {
           //Tetris
           ctx->displayID = 2;
           if(!ctx->tetris.gameStatus) initGridTetris(ctx);
+        }else if(pointRect(ctx->mouse.x, ctx->mouse.y, {(int) ((ctx->width/3) * (1.5)), 280, 210, 210})) {
+          //Snake
+          ctx->displayID = 3;
+          if(!ctx->snake.gameStatus) initGridSnake(ctx);
+        }else if(pointRect(ctx->mouse.x, ctx->mouse.y, {(ctx->width-200)/2, 520, 210, 210})) {
+          //Minigolf
+          ctx->displayID = 4;
+          if(!ctx->mgolf.gameStatus) initGridMgolf(ctx);
         }
         break;
       default:
@@ -321,10 +651,430 @@ void drawCredits(context* ctx) {
 void eventCredits(context* ctx) {
 
 }
+
+/*MINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLFMINIGOLF*/
+
+void newLevelMgolf(context* ctx) {
+  ctx->mgolf.level++;
+  if(ctx->mgolf.level == ctx->mgolf.maxlevels+1) {
+    ctx->mgolf.level = 1;
+    ctx->mgolf.hScore = std::min(ctx->mgolf.score, ctx->mgolf.hScore);
+    ctx->mgolf.score = 0;
+  }
+  MGolfLevel level = ctx->mgolf.levelmaps[ctx->mgolf.level];
+  ctx->mgolf.sx = level.sx;
+  ctx->mgolf.sy = level.sy;
+  ctx->mgolf.dragging = false;
+  ctx->mgolf.launching = false;
+  ctx->mgolf.power = 0;
+}
+
+void setSpeedMGolf(context* ctx) {
+  std::vector<int>::iterator i = std::lower_bound(ctx->mgolf.spThres.begin(),ctx->mgolf.spThres.end(), ctx->mgolf.power);
+  ctx->mgolf.speed = (i-ctx->mgolf.spThres.begin()) * (i-ctx->mgolf.spThres.begin());
+}
+
+void calcPowerMGolf(context* ctx) {
+  int px, py;
+  px = ctx->mouse.x;
+  py = ctx->mouse.y;
+
+  int rx = ctx->mgolf.ox + ctx->mgolf.sx, ry = ctx->mgolf.oy + ctx->mgolf.sy;
+
+  ctx->mgolf.power = std::min(400, (int) std::sqrt((rx-px)*(rx-px) + (ry-py) * (ry-py)));
+  ctx->mgolf.power *= 2;
+}
+
+void launchBall(context* ctx) {
+  double sx = ctx->mgolf.sx, sy = ctx->mgolf.sy;
+  sx += ctx->mgolf.dirx*ctx->mgolf.speed, sy -= ctx->mgolf.diry*ctx->mgolf.speed;
+  int rx = ctx->mgolf.ox + sx, ry = ctx->mgolf.oy + sy, r = 26;
+  std::vector<int> border {ctx->mgolf.border[0].first, ctx->mgolf.border[0].second, ctx->mgolf.border[2].first, ctx->mgolf.border[2].second};
+  if(rx+r >= border[2]) {
+    while(rx+r >= border[2]) {
+      rx--;
+    }
+    sx = rx - ctx->mgolf.ox;
+    ctx->mgolf.dirx *= -1;
+  }else if(rx-r <= border[0]) {
+    while(rx-r <= border[0]) {
+      rx++;
+    }
+    sx = rx - ctx->mgolf.ox;
+    ctx->mgolf.dirx *= -1;
+  }
+  if(ry+r >= border[3]) {
+    while(ry+r >= border[3]) {
+      ry--;
+    }
+    sy = ry-ctx->mgolf.oy;
+    ctx->mgolf.diry *= -1;
+  }else if(ry-r <= border[1]) {
+    while(ry-r <= border[1]) {
+      ry++;
+    }
+    sy = ry-ctx->mgolf.oy;
+    ctx->mgolf.diry *= -1;
+  }
+
+  MGolfLevel level = ctx->mgolf.levelmaps[ctx->mgolf.level];
+  if(circCirc(ctx->mgolf.ox+ctx->mgolf.sx, ctx->mgolf.oy+ctx->mgolf.sy, 25, level.hx+ctx->mgolf.ox, level.hy+ctx->mgolf.oy, 22)) {
+    newLevelMgolf(ctx);
+    return;
+  }
+  for(int x = 0; x < level.blocks.size(); x++) {
+    int bx = level.blocks[x].x - (level.blocks[x].w/2), by = level.blocks[x].y - (level.blocks[x].h/2);
+    std::pair<bool, bool> col2 = rectCirc(ctx->mgolf.ox + sx, ctx->mgolf.oy + sy, 26, {ctx->mgolf.ox + bx, ctx->mgolf.oy + by, level.blocks[x].w, level.blocks[x].h});
+    if(col2.first) {
+      if(sx+r >= bx && sx-r <= bx) {
+        while(sx+r >= bx) {
+          sx--;
+        }
+      }else if(sx-r <= bx+level.blocks[x].w && sx+r >= bx) {
+        while(sx-r <= bx+level.blocks[x].w) {
+          sx++;
+        }
+      }
+      ctx->mgolf.dirx *= -1;
+    }
+    if(col2.second) {
+      if(sy+r >= by && sy-r <= by) {
+        while(sy+r >= by) {
+          sy--;
+        }
+      }else if(sy-r <= by+level.blocks[x].h && sy+r >= by) {
+        while(sy-r <= by+level.blocks[x].h) {
+          sy++;
+        }
+      }
+      ctx->mgolf.diry *= -1;
+    }
+    if(col2.first || col2.second) {
+      if(level.blocks[x].type == ctx->mgolf.bounce) {
+        ctx->mgolf.power = 810;
+      }
+      break;
+    }
+  }
+  ctx->mgolf.sx = sx;
+  ctx->mgolf.sy = sy;
+  ctx->mgolf.power -= ctx->mgolf.speed;
+  setSpeedMGolf(ctx);
+  if(ctx->mgolf.power <= 0) {
+    ctx->mgolf.launching = false;
+    ctx->mgolf.power = 0;
+    return;
+  }
+}
+
+void drawGridMgolf(context* ctx) {
+  if(ctx->mgolf.launching) {
+    launchBall(ctx);
+  }
+  drawImage(ctx->mgolf.sprites[ctx->mgolf.bg], {(ctx->width-1200)/2, 200, 1200, 600}, {0, 0, 1200, 600}, ctx);
+  writeText("Strokes: " + std::to_string(ctx->mgolf.score), ctx->width/2, 50, 0, ctx);
+  if(ctx->mgolf.hScore != INT_MAX){
+    writeText("High Score: " + std::to_string(ctx->mgolf.hScore), ctx->width/2, 70, 0, ctx);
+  }
+  writeText("POWER: " + std::to_string(ctx->mgolf.power), ctx->width/2, 850, 0, ctx);
+  MGolfLevel level = ctx->mgolf.levelmaps[ctx->mgolf.level];
+
+  int ox = (ctx->width-1200)/2, oy = 200;
+  int sx = (int) ctx->mgolf.sx, sy = (int) ctx->mgolf.sy;
+  int hx = ctx->mgolf.levelmaps[ctx->mgolf.level].hx, hy = ctx->mgolf.levelmaps[ctx->mgolf.level].hy;
+
+  drawImage(ctx->mgolf.sprites[ctx->mgolf.ball], {ox+sx-25, oy+sy-25, 50, 50}, {0, 0, 50, 50}, ctx);
+  drawImage(ctx->mgolf.sprites[ctx->mgolf.hole], {ox+hx-25, oy+hy-25, 50, 50}, {0, 0, 50, 50}, ctx);
+  drawImage(ctx->mgolf.sprites[ctx->mgolf.flag], {ox+hx-25, oy+hy-125, 50, 125}, {0, 0, 50, 125}, ctx);
+
+  if(level.blocks.size()) {
+    std::vector<MGolfObstacle> blocks = level.blocks;
+
+    for(int x = 0; x < blocks.size(); x++) {
+      drawImage(ctx->mgolf.sprites[blocks[x].type], {ox+blocks[x].x-(blocks[x].w/2), oy+blocks[x].y-(blocks[x].h/2), blocks[x].w, blocks[x].h}, {0, 0, blocks[x].w, blocks[x].h}, ctx);
+    }
+  }
+
+  if(ctx->mgolf.dragging) {
+    calcPowerMGolf(ctx);
+    setDrawColor(ctx->mgolf.linecolor, ctx);
+    int px, py;
+    px = ctx->mouse.x;
+    py = ctx->mouse.y;
+    
+    for(int x = 0; x < 3; x++) {
+      for(int y = 0; y < 3; y++) {
+        SDL_RenderDrawLine(ctx->renderer, px, py, ox+sx+x, oy+sy+y);
+      }
+    }
+  }
+}
+
+void eventMgolf(context* ctx) {
+  SDL_Event e = ctx->event;
+
+  while(SDL_PollEvent(&e)) {
+    switch(e.type) {
+      case SDL_MOUSEBUTTONDOWN:{
+        //Backbutton
+        if(pointRect(ctx->mouse.x, ctx->mouse.y, {40, 40, 150, 37})) {
+          ctx->displayID = 0;
+        }else if(pointCirc(ctx->mouse.x, ctx->mouse.y, ctx->mgolf.ox + ctx->mgolf.sx, ctx->mgolf.oy + ctx->mgolf.sy, 50)) {
+          if(!ctx->mgolf.launching){
+            ctx->mgolf.dragging = true;
+            ctx->mgolf.ball = loadImg("assets/minigolf/ball2.png", ctx->mgolf.sprites, ctx);
+          }
+        }
+        
+        break;
+      }
+      case SDL_MOUSEBUTTONUP: {
+        if(ctx->mgolf.dragging) {
+          ctx->mgolf.score++;
+          int px, py;
+          px = ctx->mouse.x;
+          py = ctx->mouse.y;
+
+          int rx = ctx->mgolf.ox + ctx->mgolf.sx, ry = ctx->mgolf.oy + ctx->mgolf.sy;
+
+          ctx->mgolf.launching = true;
+          calcPowerMGolf(ctx);
+          ctx->mgolf.iPower = ctx->mgolf.power;
+          setSpeedMGolf(ctx);
+          double pyy, pxx;
+          pyy = ry-py;
+          pxx = px-rx;
+
+          ctx->mgolf.dir = (std::atan2(pyy, pxx)) * (180/3.14159265);
+          if(ctx->mgolf.dir < 180) {
+            ctx->mgolf.dir += 180;
+          }else{
+            ctx->mgolf.dir -= 180;
+          }
+          ctx->mgolf.dirx = std::cos(ctx->mgolf.dir * (3.14159265/180));
+          ctx->mgolf.diry = std::sin(ctx->mgolf.dir * (3.14159265/180));
+          
+          ctx->mgolf.ball = loadImg("assets/minigolf/ball.png", ctx->mgolf.sprites, ctx);
+          ctx->mgolf.dragging = false;
+        }
+      }
+      default:
+        break;
+    }
+  }
+}
+
+void mgolf(context* ctx) {
+  drawGridMgolf(ctx);
+  drawBack(ctx);
+  eventMgolf(ctx);
+}
+
 /*SNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKESNAKE*/
 
-void snake(context* ctx) {
+void gameOverSnake(context* ctx) {
+  int size = ctx->snake.curSize;
+  ctx->snakeHighScore.first = std::max(ctx->snakeHighScore.first, ctx->snake.score);
+  ctx->snakeHighScore.second = ctx->snake.curSize;
+  Snake snake;
+  ctx->snake = snake;
+  ctx->snake.startDelaying = true;
+  ctx->snake.curSize = size;
+  initGridSnake(ctx);
+}
 
+void newAppleSnake(context* ctx) {
+  while(ctx->snake.grid[ctx->snake.ax][ctx->snake.ay] != 0){
+    ctx->snake.ax = int(rand() % ctx->snake.mapSize[ctx->snake.curSize]);
+    ctx->snake.ay = int(rand() % ctx->snake.mapSize[ctx->snake.curSize]);
+  }
+}
+
+void deleteTailSnake(context* ctx) {
+  int tx = ctx->snake.tx, ty = ctx->snake.ty;
+  ctx->snake.grid[tx][ty] = 0;
+  tx += ctx->snake.dirs[ctx->snake.dirGrid[ctx->snake.tx][ctx->snake.ty]-1].first;
+  ty += ctx->snake.dirs[ctx->snake.dirGrid[ctx->snake.tx][ctx->snake.ty]-1].second;
+  ctx->snake.dirGrid[ctx->snake.tx][ctx->snake.ty] = 0;
+  ctx->snake.tx = tx;
+  ctx->snake.ty = ty;
+}
+
+void drawCurSnake(context* ctx) {
+  int hx = ctx->snake.hx, hy = ctx->snake.hy;
+  int ax = ctx->snake.ax, ay = ctx->snake.ay;
+  if(ctx->snake.gameStatus == 1) {
+    if(ctx->frameCount == 12 || ctx->frameCount == 24 || ctx->frameCount == 36 || ctx->frameCount == 48 || ctx->frameCount == 0) {
+      ctx->snake.odir = ctx->snake.dir;
+      ctx->snake.grid[hx][hy] = 1;
+      ctx->snake.dirGrid[hx][hy] = ctx->snake.dir;
+      hx += ctx->snake.dirs[ctx->snake.dir-1].first;
+      hy += ctx->snake.dirs[ctx->snake.dir-1].second;
+      if(hx >= ctx->snake.mapSize[ctx->snake.curSize] || hy >= ctx->snake.mapSize[ctx->snake.curSize] || hx < 0 || hy < 0 || (ctx->snake.grid[hx][hy] == 1)) {
+        gameOverSnake(ctx);
+        return;
+      }
+      ctx->snake.dirGrid[hx][hy] = ctx->snake.dir;
+      ctx->snake.grid[hx][hy] = ctx->snake.dir+1;
+      if(hx == ax && hy == ay) {
+        newAppleSnake(ctx);
+        ctx->snake.score++;
+        ctx->snake.length++;
+      }else{
+        deleteTailSnake(ctx);
+      }
+      ctx->snake.hx = hx;
+      ctx->snake.hy = hy;
+    }
+  }
+}
+
+void drawAppleSnake(context* ctx) {
+  int ax = ctx->snake.ax, ay = ctx->snake.ay;
+  ctx->snake.grid[ax][ay] = 6;
+}
+
+void drawGridSnake(context* ctx) {
+  writeText("Snake", ctx->width/2, 30, 0, ctx);
+  writeText("Score: " + std::to_string(ctx->snake.score), ctx->width/2, 110, 0, ctx);
+  writeText(("High Score: " + ((ctx->snakeHighScore.first) ? ((std::to_string(ctx->snakeHighScore.first) + " (" + ctx->snake.sizes[ctx->snakeHighScore.second]) + ")") : ("NONE"))), ctx->width/2, 180, 0, ctx);
+
+  int ox = ctx->snake.ox, oy = ctx->snake.oy;
+
+  int sx = ox, sy = oy;
+  int s = ctx->snake.mapSize[ctx->snake.curSize];
+
+  drawCurSnake(ctx);
+  drawAppleSnake(ctx);
+
+  for(int x = 0; x < s; x++) {
+    sx = ox;
+    for(int y = 0; y < s; y++) {
+      if(y&1) {
+        if(x&1) {
+          drawImage(ctx->snake.sprites[ctx->snake.space1], {sx, sy, 30, 30}, {0, 0, 30, 30}, ctx);
+        }else {
+          drawImage(ctx->snake.sprites[ctx->snake.space2], {sx, sy, 30, 30}, {0, 0, 30, 30}, ctx);
+        }
+      } else {
+        if(x&1) {
+          drawImage(ctx->snake.sprites[ctx->snake.space2], {sx, sy, 30, 30}, {0, 0, 30, 30}, ctx);
+        } else {
+          drawImage(ctx->snake.sprites[ctx->snake.space1], {sx, sy, 30, 30}, {0, 0, 30, 30}, ctx);
+        }
+      }
+
+      if(ctx->snake.grid[x][y]) {
+        if(ctx->snake.grid[x][y] == 1) {
+          drawImage(ctx->snake.sprites[ctx->snake.body], {sx+7, sy+7, 15, 15}, {0, 0, 15, 15}, ctx);
+        }else if(ctx->snake.grid[x][y] == 2) {
+          drawImage(ctx->snake.sprites[ctx->snake.headup], {sx+7, sy+7, 15, 15}, {0, 0, 15, 15}, ctx);
+        }else if(ctx->snake.grid[x][y] == 3) {
+          drawImage(ctx->snake.sprites[ctx->snake.headdown], {sx+7, sy+7, 15, 15}, {0, 0, 15, 15}, ctx);
+        }else if(ctx->snake.grid[x][y] == 4) {
+          drawImage(ctx->snake.sprites[ctx->snake.headright], {sx+7, sy+7, 15, 15}, {0, 0, 15, 15}, ctx);
+        }else if(ctx->snake.grid[x][y] == 5) {
+          drawImage(ctx->snake.sprites[ctx->snake.headleft], {sx+7, sy+7, 15, 15}, {0, 0, 15, 15}, ctx);
+        }else if(ctx->snake.grid[x][y] == 6) {
+          drawImage(ctx->snake.sprites[ctx->snake.apple], {sx+7, sy+7, 15, 15}, {0, 0, 15, 15}, ctx);
+        }
+      }
+      sx += 30;
+    }
+    sy += 30;
+  }
+
+  if(!ctx->snake.gameStatus) {
+    drawImage(ctx->snake.sprites[ctx->snake.start], {ox + ((s*30)-100)/2, oy+200, 100, 100}, {0, 0, 100, 100}, ctx);
+    drawImage(ctx->snake.sprites[ctx->snake.big], {65, 350, 100, 40}, {0, 0, 100, 40}, ctx);
+    drawImage(ctx->snake.sprites[ctx->snake.mid], {65, 400, 100, 40}, {0, 0, 100, 40}, ctx);
+    drawImage(ctx->snake.sprites[ctx->snake.small], {65, 450, 100, 40}, {0, 0, 100, 40}, ctx);
+  }
+}
+
+void eventSnake(context* ctx) {
+  SDL_Event e = ctx->event;
+
+  if(ctx->snake.startDelaying) {
+    ctx->snake.startDelay--;
+    if(!ctx->snake.startDelay) {
+      ctx->snake.startDelaying = false;
+      ctx->snake.startDelay = 45;
+    }
+    return;
+  }
+
+  while(SDL_PollEvent(&e)) {
+    switch(e.type) {
+      case SDL_MOUSEBUTTONDOWN:
+        //Backbutton
+        if(pointRect(ctx->mouse.x, ctx->mouse.y, {40, 40, 150, 37})) {
+          ctx->displayID = 0;
+        }
+        if(!ctx->snake.gameStatus){
+          if(pointRect(ctx->mouse.x, ctx->mouse.y, {65, 350, 100, 40})) {
+            ctx->snake.curSize = 2;
+            initGridSnake(ctx);
+          }else if(pointRect(ctx->mouse.x, ctx->mouse.y, {65, 400, 100, 40})) {
+            ctx->snake.curSize = 1;
+            initGridSnake(ctx);
+          }else if(pointRect(ctx->mouse.x, ctx->mouse.y, {65, 450, 100, 40})) {
+            ctx->snake.curSize = 0;
+            initGridSnake(ctx);
+          }
+        }
+        break;
+      case SDL_KEYDOWN:
+        switch(e.key.keysym.sym) {
+          case SDLK_w:
+          case SDLK_UP: {
+            if(!ctx->snake.gameStatus) {
+              ctx->snake.gameStatus = 1;
+            }
+            if(ctx->snake.odir != 2)
+            ctx->snake.dir = 1;
+            break;
+          }
+          case SDLK_s:
+          case SDLK_DOWN: {
+            if(!ctx->snake.gameStatus) {
+              ctx->snake.gameStatus = 1;
+            }
+            if(ctx->snake.odir != 1)
+            ctx->snake.dir = 2;
+            break;
+          }
+          case SDLK_d:
+          case SDLK_RIGHT: {
+            if(!ctx->snake.gameStatus) {
+              ctx->snake.gameStatus = 1;
+            }
+            if(ctx->snake.odir != 4)
+            ctx->snake.dir = 3;
+            break;
+          }
+          case SDLK_a:
+          case SDLK_LEFT: {
+            if(!ctx->snake.gameStatus) {
+              ctx->snake.gameStatus = 1;
+            }
+            if(ctx->snake.odir != 3)
+            ctx->snake.dir = 4;
+            break;
+          }
+          default:
+            break;
+        }
+      default:
+        break;
+    }
+  }
+}
+
+void snake(context* ctx) {
+  drawGridSnake(ctx);
+  drawBack(ctx);
+  eventSnake(ctx);
 }
 
 /*TETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRISTETRIS*/
@@ -674,7 +1424,7 @@ bool collideHorizontalTetris(context* ctx, int d) {
   return false;
 }
 
-void drawGrid(context* ctx) {
+void drawGridTetris(context* ctx) {
   writeText("40 Lines", ctx->width/2, 30, 0, ctx);
 
   int ox = ctx->tetris.ox, oy = ctx->tetris.oy;
@@ -892,7 +1642,7 @@ void tetris(context* ctx) {
       gameFinishTetris(ctx);
     }
   }
-  drawGrid(ctx);
+  drawGridTetris(ctx);
   drawBack(ctx);
   eventTetris(ctx); 
 }
@@ -922,6 +1672,9 @@ void loop(context *ctx) {
       break;
     case 3:
       snake(ctx);
+      break;
+    case 4:
+      mgolf(ctx);
       break;
     default:
       break;
