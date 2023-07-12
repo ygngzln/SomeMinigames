@@ -193,7 +193,7 @@ Module['FS_createPath']("/assets", "tetris", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/assets/.DS_Store", "start": 0, "end": 6148}, {"filename": "/assets/BrunoAceSC-Regular.ttf", "start": 6148, "end": 60776}, {"filename": "/assets/backbutton.png", "start": 60776, "end": 63182}, {"filename": "/assets/cursor.png", "start": 63182, "end": 68565}, {"filename": "/assets/gitlogo.png", "start": 68565, "end": 70165}, {"filename": "/assets/logo-amg.png", "start": 70165, "end": 71211}, {"filename": "/assets/minigolf.png", "start": 71211, "end": 82703}, {"filename": "/assets/minigolf/background.png", "start": 82703, "end": 106191}, {"filename": "/assets/minigolf/ball.png", "start": 106191, "end": 115755}, {"filename": "/assets/minigolf/ball2.png", "start": 115755, "end": 126280}, {"filename": "/assets/minigolf/bounce.png", "start": 126280, "end": 133479}, {"filename": "/assets/minigolf/flag.png", "start": 133479, "end": 134162}, {"filename": "/assets/minigolf/hole.png", "start": 134162, "end": 135094}, {"filename": "/assets/minigolf/rock1.png", "start": 135094, "end": 135833}, {"filename": "/assets/minigolf/rock2.png", "start": 135833, "end": 141532}, {"filename": "/assets/minigolf/rock3.png", "start": 141532, "end": 146772}, {"filename": "/assets/playbutton.png", "start": 146772, "end": 147454}, {"filename": "/assets/snake.png", "start": 147454, "end": 156912}, {"filename": "/assets/snake/apple.png", "start": 156912, "end": 157534}, {"filename": "/assets/snake/big.png", "start": 157534, "end": 158320}, {"filename": "/assets/snake/body.png", "start": 158320, "end": 166399}, {"filename": "/assets/snake/headdown.png", "start": 166399, "end": 175209}, {"filename": "/assets/snake/headleft.png", "start": 175209, "end": 184293}, {"filename": "/assets/snake/headright.png", "start": 184293, "end": 193370}, {"filename": "/assets/snake/headup.png", "start": 193370, "end": 202187}, {"filename": "/assets/snake/mid.png", "start": 202187, "end": 202978}, {"filename": "/assets/snake/small.png", "start": 202978, "end": 203776}, {"filename": "/assets/snake/space1.png", "start": 203776, "end": 208887}, {"filename": "/assets/snake/space2.png", "start": 208887, "end": 213998}, {"filename": "/assets/snake/start.png", "start": 213998, "end": 215113}, {"filename": "/assets/tetris.png", "start": 215113, "end": 216569}, {"filename": "/assets/tetris/.DS_Store", "start": 216569, "end": 222717}, {"filename": "/assets/tetris/bar.png", "start": 222717, "end": 223744}, {"filename": "/assets/tetris/block-I.png", "start": 223744, "end": 232273}, {"filename": "/assets/tetris/block-J.png", "start": 232273, "end": 243068}, {"filename": "/assets/tetris/block-L.png", "start": 243068, "end": 254208}, {"filename": "/assets/tetris/block-O.png", "start": 254208, "end": 266929}, {"filename": "/assets/tetris/block-S.png", "start": 266929, "end": 278508}, {"filename": "/assets/tetris/block-T.png", "start": 278508, "end": 290202}, {"filename": "/assets/tetris/block-Z.png", "start": 290202, "end": 302209}, {"filename": "/assets/tetris/cblue.png", "start": 302209, "end": 308502}, {"filename": "/assets/tetris/ccyan.png", "start": 308502, "end": 315580}, {"filename": "/assets/tetris/cgreen.png", "start": 315580, "end": 322183}, {"filename": "/assets/tetris/corange.png", "start": 322183, "end": 328576}, {"filename": "/assets/tetris/cpurple.png", "start": 328576, "end": 335097}, {"filename": "/assets/tetris/cred.png", "start": 335097, "end": 341614}, {"filename": "/assets/tetris/cyellow.png", "start": 341614, "end": 348256}, {"filename": "/assets/tetris/empty.png", "start": 348256, "end": 354055}, {"filename": "/assets/tetris/ghost.png", "start": 354055, "end": 360479}, {"filename": "/assets/tetris/hold.png", "start": 360479, "end": 363017}, {"filename": "/assets/tetris/tetrisnext.png", "start": 363017, "end": 364555}, {"filename": "/assets/title.png", "start": 364555, "end": 371636}], "remote_package_size": 371636});
+    loadPackage({"files": [{"filename": "/assets/.DS_Store", "start": 0, "end": 6148}, {"filename": "/assets/BrunoAceSC-Regular.ttf", "start": 6148, "end": 60776}, {"filename": "/assets/backbutton.png", "start": 60776, "end": 63182}, {"filename": "/assets/cursor.png", "start": 63182, "end": 68565}, {"filename": "/assets/gitlogo.png", "start": 68565, "end": 70165}, {"filename": "/assets/logo-amg.png", "start": 70165, "end": 71211}, {"filename": "/assets/minigolf.png", "start": 71211, "end": 82703}, {"filename": "/assets/minigolf/background.png", "start": 82703, "end": 106191}, {"filename": "/assets/minigolf/ball.png", "start": 106191, "end": 115755}, {"filename": "/assets/minigolf/ball2.png", "start": 115755, "end": 126280}, {"filename": "/assets/minigolf/bounce.png", "start": 126280, "end": 133479}, {"filename": "/assets/minigolf/flag.png", "start": 133479, "end": 134162}, {"filename": "/assets/minigolf/hole.png", "start": 134162, "end": 135094}, {"filename": "/assets/minigolf/rock1.png", "start": 135094, "end": 135833}, {"filename": "/assets/minigolf/rock2.png", "start": 135833, "end": 141532}, {"filename": "/assets/minigolf/rock3.png", "start": 141532, "end": 146772}, {"filename": "/assets/playbutton.png", "start": 146772, "end": 147454}, {"filename": "/assets/snake.png", "start": 147454, "end": 156912}, {"filename": "/assets/snake/apple.png", "start": 156912, "end": 157534}, {"filename": "/assets/snake/big.png", "start": 157534, "end": 158320}, {"filename": "/assets/snake/body.png", "start": 158320, "end": 166399}, {"filename": "/assets/snake/headdown.png", "start": 166399, "end": 175209}, {"filename": "/assets/snake/headleft.png", "start": 175209, "end": 184293}, {"filename": "/assets/snake/headright.png", "start": 184293, "end": 193370}, {"filename": "/assets/snake/headup.png", "start": 193370, "end": 202187}, {"filename": "/assets/snake/mid.png", "start": 202187, "end": 202978}, {"filename": "/assets/snake/small.png", "start": 202978, "end": 203776}, {"filename": "/assets/snake/space1.png", "start": 203776, "end": 208887}, {"filename": "/assets/snake/space2.png", "start": 208887, "end": 213998}, {"filename": "/assets/snake/start.png", "start": 213998, "end": 215113}, {"filename": "/assets/tetris.png", "start": 215113, "end": 216569}, {"filename": "/assets/tetris/.DS_Store", "start": 216569, "end": 222717}, {"filename": "/assets/tetris/bar.png", "start": 222717, "end": 223744}, {"filename": "/assets/tetris/block-I.png", "start": 223744, "end": 232273}, {"filename": "/assets/tetris/block-J.png", "start": 232273, "end": 239311}, {"filename": "/assets/tetris/block-L.png", "start": 239311, "end": 246378}, {"filename": "/assets/tetris/block-O.png", "start": 246378, "end": 259099}, {"filename": "/assets/tetris/block-S.png", "start": 259099, "end": 270678}, {"filename": "/assets/tetris/block-T.png", "start": 270678, "end": 282372}, {"filename": "/assets/tetris/block-Z.png", "start": 282372, "end": 294379}, {"filename": "/assets/tetris/cblue.png", "start": 294379, "end": 300672}, {"filename": "/assets/tetris/ccyan.png", "start": 300672, "end": 307750}, {"filename": "/assets/tetris/cgreen.png", "start": 307750, "end": 314353}, {"filename": "/assets/tetris/corange.png", "start": 314353, "end": 320746}, {"filename": "/assets/tetris/cpurple.png", "start": 320746, "end": 327267}, {"filename": "/assets/tetris/cred.png", "start": 327267, "end": 333784}, {"filename": "/assets/tetris/cyellow.png", "start": 333784, "end": 340426}, {"filename": "/assets/tetris/empty.png", "start": 340426, "end": 346225}, {"filename": "/assets/tetris/ghost.png", "start": 346225, "end": 352649}, {"filename": "/assets/tetris/hold.png", "start": 352649, "end": 355187}, {"filename": "/assets/tetris/next.png", "start": 355187, "end": 356725}, {"filename": "/assets/title.png", "start": 356725, "end": 363806}], "remote_package_size": 363806});
 
   })();
 
@@ -8953,9 +8953,9 @@ var _free = createExportWrapper("free");
 /** @type {function(...*):?} */
 var _malloc = createExportWrapper("malloc");
 /** @type {function(...*):?} */
-var ___errno_location = createExportWrapper("__errno_location");
-/** @type {function(...*):?} */
 var _saveSetjmp = createExportWrapper("saveSetjmp");
+/** @type {function(...*):?} */
+var ___errno_location = createExportWrapper("__errno_location");
 /** @type {function(...*):?} */
 var _fflush = Module["_fflush"] = createExportWrapper("fflush");
 /** @type {function(...*):?} */
@@ -9004,21 +9004,10 @@ var dynCall_ji = Module["dynCall_ji"] = createExportWrapper("dynCall_ji");
 /** @type {function(...*):?} */
 var dynCall_jiji = Module["dynCall_jiji"] = createExportWrapper("dynCall_jiji");
 
-function invoke_viiii(index,a1,a2,a3,a4) {
+function invoke_ii(index,a1) {
   var sp = stackSave();
   try {
-    getWasmTableEntry(index)(a1,a2,a3,a4);
-  } catch(e) {
-    stackRestore(sp);
-    if (e !== e+0) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_iii(index,a1,a2) {
-  var sp = stackSave();
-  try {
-    return getWasmTableEntry(index)(a1,a2);
+    return getWasmTableEntry(index)(a1);
   } catch(e) {
     stackRestore(sp);
     if (e !== e+0) throw e;
@@ -9059,10 +9048,10 @@ function invoke_vi(index,a1) {
   }
 }
 
-function invoke_ii(index,a1) {
+function invoke_iii(index,a1,a2) {
   var sp = stackSave();
   try {
-    return getWasmTableEntry(index)(a1);
+    return getWasmTableEntry(index)(a1,a2);
   } catch(e) {
     stackRestore(sp);
     if (e !== e+0) throw e;
@@ -9129,6 +9118,17 @@ function invoke_i(index) {
   var sp = stackSave();
   try {
     return getWasmTableEntry(index)();
+  } catch(e) {
+    stackRestore(sp);
+    if (e !== e+0) throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_viiii(index,a1,a2,a3,a4) {
+  var sp = stackSave();
+  try {
+    getWasmTableEntry(index)(a1,a2,a3,a4);
   } catch(e) {
     stackRestore(sp);
     if (e !== e+0) throw e;

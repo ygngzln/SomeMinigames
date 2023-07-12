@@ -89,7 +89,7 @@ struct Snake {
 
   int length = 3;
 
-  int startDelay = 45;
+  int startDelay = 90;
   bool startDelaying = false;
 
   std::vector<std::string> sizes {"Small Grid", "Medium Grid", "Large Grid"};
